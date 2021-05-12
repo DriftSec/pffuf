@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -48,13 +49,39 @@ func init() {
 	var inputFile string
 	// flag.StringVar(&inputFile, "f", "*.json", "json files")
 	flag.Parse()
-	inputFile = flag.Args()[0]
+	if len(flag.Args()) > 0 {
+		inputFile = flag.Args()[0]
+	} else {
+		inputFile = "./*.json"
+	}
 	inputFiles = getFilelist(inputFile)
 
+	if len(inputFiles) <= 0 {
+		fmt.Println("No JSON files found !!!")
+		os.Exit(1)
+	}
+
 	for _, curfile := range inputFiles {
+		// read the whole file at once
+		b, err := ioutil.ReadFile(curfile)
+		if err != nil {
+			panic(err)
+		}
+		s := string(b)
+		// //check whether s contains substring text
+		if !strings.Contains(s, "ffuf") && !strings.Contains(s, "results") {
+			fmt.Println(curfile, "does appear to be an ffuf JSON file, skipping")
+			continue
+		}
+
 		getEndpoints(curfile)
 		getCommands(curfile)
 
+	}
+
+	if len(commands) <= 0 && len(results) <= 0 {
+		fmt.Println("Nothing to parse, exiting")
+		os.Exit(1)
 	}
 
 	fmt.Println("Loaded", len(inputFiles), "JSON files.")
@@ -103,6 +130,14 @@ func selectSort() {
 
 	sorting = result
 
+	results = results[:0]
+	results = origresults
+	doSort()
+	doFilter()
+
+}
+
+func doSort() {
 	if sorting == "Status" {
 		sort.Slice(results[:], func(i, j int) bool {
 			return results[i].Status < results[j].Status
@@ -138,9 +173,26 @@ func selectSort() {
 	if sorting == "None" {
 		results = results[:0]
 		results = origresults
+		doFilter()
 
 	}
+}
 
+func doFilter() {
+	results = results[:0]
+	results = origresults
+
+	var resultstmp []NavResults
+
+	for _, cur := range results {
+		if !checkFilter(cur) {
+			continue
+		}
+		resultstmp = append(resultstmp, cur)
+
+	}
+	results = resultstmp
+	doSort()
 }
 
 func writeFile(filename string) {
@@ -289,9 +341,9 @@ func main() {
 		if result == "e" || result == "endpoints" {
 			curScreen = curScreen[:0]
 			for _, ep := range results {
-				if !checkFilter(ep) {
-					continue
-				}
+				// if !checkFilter(ep) {
+				// 	continue
+				// }
 				fmt.Println(ep.Endpoint)
 				curScreen = append(curScreen, ep.Endpoint)
 			}
@@ -300,9 +352,9 @@ func main() {
 		if result == "u" || result == "urls" {
 			curScreen = curScreen[:0]
 			for _, ep := range results {
-				if !checkFilter(ep) {
-					continue
-				}
+				// if !checkFilter(ep) {
+				// 	continue
+				// }
 				fmt.Println(ep.URL)
 				curScreen = append(curScreen, ep.URL)
 			}
@@ -320,9 +372,9 @@ func main() {
 			}
 
 			for _, ep := range results {
-				if !checkFilter(ep) {
-					continue
-				}
+				// if !checkFilter(ep) {
+				// 	continue
+				// }
 				indent := strings.Repeat(" ", (maxLen + 5 - len(ep.URL)))
 				var res_hdr string
 				res_hdr = fmt.Sprintf("%s%s[Status: %d, Size: %d, Words: %d, Lines: %d]", ep.URL, indent, ep.Status, ep.Length, ep.Words, ep.Lines)
@@ -376,6 +428,7 @@ func setFilter(cmdline string) {
 	if cmd == "ms" {
 		filters.LinesMatch = argsi
 	}
+	doFilter()
 }
 
 func showFilters() {
@@ -398,6 +451,9 @@ func clearFilters() {
 	filters.WordsMatch = filters.WordsMatch[:0]
 	filters.LinesMatch = filters.LinesMatch[:0]
 	filters.LenMatch = filters.LenMatch[:0]
+	results = results[:0]
+	results = origresults
+	doSort()
 	fmt.Println("All Filters Cleared !")
 }
 
