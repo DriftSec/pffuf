@@ -46,18 +46,31 @@ var (
 )
 
 func init() {
-	var inputFile string
-	// flag.StringVar(&inputFile, "f", "*.json", "json files")
-	flag.Parse()
-	if len(flag.Args()) > 0 {
-		inputFile = flag.Args()[0]
-	} else {
-		inputFile = "./*.json"
+	var inputPath string
+
+	flag.Usage = func() {
+		fmt.Println("")
+		fmt.Println("Usage:")
+		fmt.Println("     ./pffuf [path to ffuf JSON files]")
+		fmt.Println("")
 	}
-	inputFiles = getFilelist(inputFile)
+
+	flag.Parse()
+
+	if flag.NArg() > 0 {
+		inputPath = flag.Args()[0]
+		if !strings.HasSuffix(inputPath, "/") {
+			inputPath = inputPath + "/"
+		}
+	} else {
+		inputPath = "./"
+	}
+
+	inputFiles = getFilelist(inputPath + "*.json")
 
 	if len(inputFiles) <= 0 {
 		fmt.Println("No JSON files found !!!")
+		flag.Usage()
 		os.Exit(1)
 	}
 
