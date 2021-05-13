@@ -57,3 +57,14 @@ type NavResults struct {
 	Wordlist   string
 	Outputfile string
 }
+
+type Filters struct {
+	StatusMatch []int
+	StatusHide  []int
+	LenMatch    []int
+	LenHide     []int
+	WordsMatch  []int
+	WordsHide   []int
+	LinesHide   []int
+	LinesMatch  []int
+}
