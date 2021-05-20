@@ -5,18 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 )
-
-func getFilelist(inputArg string) []string {
-	// pattern := inputArg
-	var retval []string
-	matches, _ := filepath.Glob(inputArg)
-	for _, match := range matches {
-		retval = append(retval, match)
-	}
-	return retval
-}
 
 func getCommands(curFile string) {
 	jsonFile, err := os.Open(curFile)
@@ -30,7 +19,7 @@ func getCommands(curFile string) {
 	var output FfufOutput
 	json.Unmarshal(byteValue, &output)
 
-	commands = append(commands,output.CommandLine)
+	commands = append(commands, output.CommandLine)
 
 }
 

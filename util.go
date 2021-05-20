@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 const (
@@ -13,6 +14,16 @@ const (
 	ANSI_BLUE           = "\x1b[34m"
 	ANSI_YELLOW         = "\x1b[33m"
 )
+
+func getFilelist(inputArg string) []string {
+	// pattern := inputArg
+	var retval []string
+	matches, _ := filepath.Glob(inputArg)
+	for _, match := range matches {
+		retval = append(retval, match)
+	}
+	return retval
+}
 
 func contains(filterlst []int, cur int) bool {
 	for _, v := range filterlst {

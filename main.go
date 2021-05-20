@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/manifoldco/promptui"
 )
@@ -22,6 +26,16 @@ var (
 )
 
 func init() {
+	initfunc()
+}
+
+func initfunc() {
+	inputFiles = inputFiles[:0]
+	curScreen = curScreen[:0]
+	results = results[:0]
+	origresults = origresults[:0]
+	commands = commands[:0]
+
 	var inputPath string
 
 	flag.Usage = func() {
@@ -126,6 +140,95 @@ func selectSort() {
 
 }
 
+func joinResults(filename string) {
+	var (
+		sz   int
+		outs FfufOutput
+	)
+
+	_, err := os.Stat(filename)
+	if !os.IsNotExist(err) {
+		if !promptYesNo("File exsists, overwrite?") {
+			return
+		}
+	}
+
+	f, err := os.Create(filename)
+
+	if err != nil {
+		fmt.Println("Failed to create ", filename, "!!!")
+	}
+
+	defer f.Close()
+
+	outs.CommandLine = "Created by pffuf"
+	currentTime := time.Now()
+
+	outs.Time = currentTime.Format("2006-01-02T15:04:05Z") //"2021-04-02T17:41:37Z"
+	// outs.Config.URL            string               `json:"url"`
+	// outs.Config.Method         string               `json:"method"`
+	outs.Config.Outputfile = filename
+	// outs.Config.InputProviders []FfufInputProviders `json:"inputproviders"`
+
+	for _, ep := range results {
+		var ffufresult FfufResult
+		ffufresult.Input.FUZZ = ep.Endpoint
+		ffufresult.Position = 0 //<<<<<<<<<<<<<<<<<<???????????????????????
+		ffufresult.Status = ep.Status
+		ffufresult.Length = ep.Length
+		ffufresult.Words = ep.Words
+		ffufresult.Lines = ep.Lines
+		ffufresult.URL = ep.URL
+		u, _ := url.Parse(ep.URL)
+		ffufresult.Host = u.Host
+
+		outs.Results = append(outs.Results, ffufresult)
+	}
+	u, err := json.Marshal(outs)
+	if err != nil {
+		fmt.Println("failed to marshal JSON:", err)
+	}
+	sz, err = f.Write(u)
+	if err != nil {
+		fmt.Println("Failed to create ", filename, "!!!")
+	} else {
+		fmt.Println("Wrote", sz, "bytes to ", filename)
+	}
+
+}
+
+func grep(expr string) {
+	var tmpscreen []string
+	tmpscreen = curScreen //append(tmpscreen, curScreen)
+	curScreen = curScreen[:0]
+	for _, line := range tmpscreen {
+		matched, err := regexp.MatchString(expr, line)
+
+		if err != nil {
+			fmt.Println("Invalid Expression !!!")
+		} else if matched {
+			fmt.Println(line)
+			curScreen = append(curScreen, line)
+		}
+	}
+}
+
+func grepv(expr string) {
+	var tmpscreen []string
+	tmpscreen = curScreen //append(tmpscreen, curScreen)
+	curScreen = curScreen[:0]
+	for _, line := range tmpscreen {
+		matched, err := regexp.MatchString(expr, line)
+
+		if err != nil {
+			fmt.Println("Invalid Expression !!!")
+		} else if !matched {
+			fmt.Println(line)
+			curScreen = append(curScreen, line)
+		}
+	}
+}
+
 func help() {
 
 	fmt.Println("c|commands          List ffuf commands that have been run")
@@ -146,13 +249,17 @@ func help() {
 	fmt.Println("ml [val,val2]       Match lines")
 	fmt.Println("ms [val,val2]       Match length")
 	fmt.Println("s|sort                sort ")
+	fmt.Println("g|grep [expr]       Run grep on last output")
+	fmt.Println("gv|grepv [expr]     Run grep exclude on last output")
+	fmt.Println("r|reload            Reparse input path for new files")
+	fmt.Println("j|join              Combine all filtered results and export to ffuf JSON file.")
 
 }
 
 func main() {
 	for {
 		validate := func(input string) error {
-			validCMDs := []string{"t", "tree", "s", "sort", "h", "help", "sf", "show-filters", "cf", "clear-filters", "fc", "fw", "fl", "fs", "mc", "mw", "ml", "ms", "c", "commands", "x", "exit", "e", "endpoints", "u", "urls", "d", "details", "w", "write"}
+			validCMDs := []string{"j", "join", "r", "reload", "gv", "grepv", "g", "grep", "t", "tree", "s", "sort", "h", "help", "sf", "show-filters", "cf", "clear-filters", "fc", "fw", "fl", "fs", "mc", "mw", "ml", "ms", "c", "commands", "x", "exit", "e", "endpoints", "u", "urls", "d", "details", "w", "write"}
 			cmd := strings.Split(input, " ")[0]
 			for _, a := range validCMDs {
 				if a == cmd {
@@ -192,12 +299,53 @@ func main() {
 
 				}
 			}
+
+			if cmd == "j" || cmd == "join" {
+				if args == "" || args == " " {
+					fmt.Println("write: you must specify an output file !!")
+				} else {
+					joinResults(args)
+
+				}
+			}
+
+			if cmd == "g" || cmd == "grep" {
+				if args == "" || args == " " {
+					fmt.Println("write: you must specify an expression !!")
+				} else {
+					grep(args)
+
+				}
+			}
+			if cmd == "gv" || cmd == "grepv" {
+				if args == "" || args == " " {
+					fmt.Println("write: you must specify an expression !!")
+				} else {
+					grepv(args)
+
+				}
+			}
 		}
 
 		if result == "w" || result == "write" {
 			fmt.Println("write: you must specify an output file !!")
 		}
 
+		if result == "j" || result == "join" {
+			fmt.Println("write: you must specify an output file !!")
+		}
+
+		if result == "g" || result == "grep" {
+			fmt.Println("write: you must specify an expression !!")
+		}
+
+		if result == "gv" || result == "grepv" {
+			fmt.Println("write: you must specify an expression !!")
+		}
+
+		if result == "r" || result == "reload" {
+			initfunc()
+		}
 		if result == "h" || result == "help" {
 			help()
 		}
@@ -234,8 +382,10 @@ func main() {
 		}
 
 		if result == "c" || result == "commands" {
+			curScreen = curScreen[:0]
 			for _, cmd := range commands {
 				fmt.Println(cmd)
+				curScreen = append(curScreen, cmd)
 			}
 		}
 
