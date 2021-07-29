@@ -51,23 +51,6 @@ func doSort() {
 	}
 }
 
-func doFilter() {
-	results = results[:0]
-	results = origresults
-
-	var resultstmp []NavResults
-
-	for _, cur := range results {
-		if !checkFilter(cur) {
-			continue
-		}
-		resultstmp = append(resultstmp, cur)
-
-	}
-	results = resultstmp
-	doSort()
-}
-
 func setFilter(cmdline string) {
 	parts := strings.Split(cmdline, " ")
 	cmd := parts[0]
@@ -159,51 +142,65 @@ func clearFilters() {
 }
 
 func ifMatch(line NavResults) bool {
-	if len(filters.RegExMatch) > 0 && containsRegExp(filters.RegExMatch, line.URL) {
-		return true
-	}
-	if len(filters.StatusMatch) > 0 && containsInt(filters.StatusMatch, line.Status) {
-		return true
-	}
-	if len(filters.LenMatch) > 0 && containsInt(filters.LenMatch, line.Length) {
-		return true
-	}
-	if len(filters.WordsMatch) > 0 && containsInt(filters.WordsMatch, line.Words) {
-		return true
-	}
-	if len(filters.LinesMatch) > 0 && containsInt(filters.LinesMatch, line.Lines) {
+	// if len(filters.RegExMatch) > 0 && containsRegExp(filters.RegExMatch, line.URL) {
+	// 	return true
+	// }
+	// if len(filters.StatusMatch) > 0 && containsInt(filters.StatusMatch, line.Status) {
+	// 	return true
+	// }
+	// if len(filters.LenMatch) > 0 && containsInt(filters.LenMatch, line.Length) {
+	// 	return true
+	// }
+	// if len(filters.WordsMatch) > 0 && containsInt(filters.WordsMatch, line.Words) {
+	// 	return true
+	// }
+	// if len(filters.LinesMatch) > 0 && containsInt(filters.LinesMatch, line.Lines) {
+	// 	return true
+	// }
+
+	if (len(filters.RegExMatch) == 0 || containsRegExp(filters.RegExMatch, line.URL)) && (len(filters.StatusMatch) == 0 || containsInt(filters.StatusMatch, line.Status)) && (len(filters.LenMatch) == 0 || containsInt(filters.LenMatch, line.Length)) && (len(filters.WordsMatch) == 0 || containsInt(filters.WordsMatch, line.Words)) && (len(filters.LinesMatch) == 0 || containsInt(filters.LinesMatch, line.Lines)) {
 		return true
 	}
 
 	return false
 }
 
-// checks the current filters, true = show it, false = hide it
-func checkFilter(line NavResults) bool {
-	if ifMatch(line) {
+func ifHide(line NavResults) bool {
+	if len(filters.RegExHide) > 0 && containsRegExp(filters.RegExHide, line.URL) {
 		return true
-	} else {
-		for _, r := range filters.RegExHide {
-			if r.MatchString(line.URL) {
-				return false
+	}
+	if len(filters.StatusHide) > 0 && containsInt(filters.StatusHide, line.Status) {
+		return true
+	}
+	if len(filters.LenHide) > 0 && containsInt(filters.LenHide, line.Length) {
+		return true
+	}
+	if len(filters.WordsHide) > 0 && containsInt(filters.WordsHide, line.Words) {
+		return true
+	}
+	if len(filters.LinesHide) > 0 && containsInt(filters.LinesHide, line.Lines) {
+		return true
+	}
+	return false
+}
+
+func doFilter() {
+	results = results[:0]
+	results = origresults
+
+	var resultstmp []NavResults
+
+	for _, cur := range results {
+		if len(filters.StatusMatch) > 0 || len(filters.LenMatch) > 0 || len(filters.WordsMatch) > 0 || len(filters.LinesMatch) > 0 || len(filters.RegExMatch) > 0 {
+			if ifMatch(cur) {
+				resultstmp = append(resultstmp, cur)
+			}
+		} else {
+			if !ifHide(cur) {
+				resultstmp = append(resultstmp, cur)
 			}
 		}
-		if containsInt(filters.StatusHide, line.Status) {
-			return false
-		}
-		if containsInt(filters.LenHide, line.Length) {
-			return false
-		}
-		if containsInt(filters.WordsHide, line.Words) {
-			return false
-		}
-		if containsInt(filters.LinesHide, line.Lines) {
-			return false
-		}
 	}
-	if len(filters.LinesMatch) == 0 && len(filters.StatusMatch) == 0 && len(filters.WordsMatch) == 0 && len(filters.LenMatch) == 0 {
-		return true
-	}
-
-	return false
+	results = resultstmp
+	doSort()
 }
