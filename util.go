@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 const (
@@ -25,7 +27,26 @@ func getFilelist(inputArg string) []string {
 	return retval
 }
 
-func contains(filterlst []int, cur int) bool {
+func strcontains(filterlst []string, cur string) bool {
+	for _, v := range filterlst {
+		if strings.Contains(cur, v) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func containsRegExp(filterlst []*regexp.Regexp, cur string) bool {
+	for _, r := range filterlst {
+		if r.MatchString(cur) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsInt(filterlst []int, cur int) bool {
 	for _, v := range filterlst {
 		if v == cur {
 			return true

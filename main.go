@@ -23,6 +23,7 @@ var (
 	origresults []NavResults
 	commands    []string
 	sorting     string
+	Cl          string
 )
 
 func init() {
@@ -45,6 +46,7 @@ func initfunc() {
 		fmt.Println("")
 	}
 
+	commandLine := flag.String("cl", "", "Run command line and exit")
 	flag.Parse()
 
 	if flag.NArg() > 0 {
@@ -85,6 +87,14 @@ func initfunc() {
 	if len(commands) <= 0 && len(results) <= 0 {
 		fmt.Println("Nothing to parse, exiting")
 		os.Exit(1)
+	}
+
+	if *commandLine != "" {
+		cmds := strings.Split(*commandLine, ";")
+		for _, cmd := range cmds {
+			parseCommand(cmd)
+		}
+		os.Exit(0)
 	}
 
 	fmt.Println("Loaded", len(inputFiles), "JSON files.")
@@ -244,10 +254,12 @@ func help() {
 	fmt.Println("fw [val,val2]       Filter by words")
 	fmt.Println("fl [val,val2]       Filter lines")
 	fmt.Println("fs [val,val2]       Filter lenght")
+	fmt.Println("fr [str1,str2]      Filter string (only on URL)")
 	fmt.Println("mc [val,val2]       Match status code")
 	fmt.Println("mw [val,val2]       Match words")
 	fmt.Println("ml [val,val2]       Match lines")
 	fmt.Println("ms [val,val2]       Match length")
+	fmt.Println("mr [str1,str2]      Match string (only on URL)")
 	fmt.Println("s|sort                sort ")
 	fmt.Println("g|grep [expr]       Run grep on last output")
 	fmt.Println("gv|grepv [expr]     Run grep exclude on last output")
@@ -259,7 +271,7 @@ func help() {
 func main() {
 	for {
 		validate := func(input string) error {
-			validCMDs := []string{"j", "join", "r", "reload", "gv", "grepv", "g", "grep", "t", "tree", "s", "sort", "h", "help", "sf", "show-filters", "cf", "clear-filters", "fc", "fw", "fl", "fs", "mc", "mw", "ml", "ms", "c", "commands", "x", "exit", "e", "endpoints", "u", "urls", "d", "details", "w", "write"}
+			validCMDs := []string{"j", "join", "r", "reload", "gv", "grepv", "g", "grep", "t", "tree", "s", "sort", "h", "help", "sf", "show-filters", "cf", "clear-filters", "fc", "fw", "fl", "fs", "fr", "mc", "mw", "ml", "ms", "mr", "c", "commands", "x", "exit", "e", "endpoints", "u", "urls", "d", "details", "w", "write"}
 			cmd := strings.Split(input, " ")[0]
 			for _, a := range validCMDs {
 				if a == cmd {
@@ -283,157 +295,161 @@ func main() {
 			return
 		}
 
-		// commands with args go here (except filters)
-		cmd := ""
-		args := ""
-		if strings.Contains(result, " ") {
-			parts := strings.Split(result, " ")
-			cmd = parts[0]
-			args = parts[1]
+		parseCommand(result)
+	}
+}
 
-			if cmd == "w" || cmd == "write" {
-				if args == "" || args == " " {
-					fmt.Println("write: you must specify an output file !!")
-				} else {
-					writeFile(args)
+func parseCommand(singleCommand string) {
+	result := singleCommand
+	// commands with args go here (except filters)
+	cmd := ""
+	args := ""
+	if strings.Contains(result, " ") {
+		parts := strings.Split(result, " ")
+		cmd = parts[0]
+		args = parts[1]
 
-				}
-			}
+		if cmd == "w" || cmd == "write" {
+			if args == "" || args == " " {
+				fmt.Println("write: you must specify an output file !!")
+			} else {
+				writeFile(args)
 
-			if cmd == "j" || cmd == "join" {
-				if args == "" || args == " " {
-					fmt.Println("write: you must specify an output file !!")
-				} else {
-					joinResults(args)
-
-				}
-			}
-
-			if cmd == "g" || cmd == "grep" {
-				if args == "" || args == " " {
-					fmt.Println("write: you must specify an expression !!")
-				} else {
-					grep(args)
-
-				}
-			}
-			if cmd == "gv" || cmd == "grepv" {
-				if args == "" || args == " " {
-					fmt.Println("write: you must specify an expression !!")
-				} else {
-					grepv(args)
-
-				}
 			}
 		}
 
-		if result == "w" || result == "write" {
-			fmt.Println("write: you must specify an output file !!")
-		}
+		if cmd == "j" || cmd == "join" {
+			if args == "" || args == " " {
+				fmt.Println("write: you must specify an output file !!")
+			} else {
+				joinResults(args)
 
-		if result == "j" || result == "join" {
-			fmt.Println("write: you must specify an output file !!")
-		}
-
-		if result == "g" || result == "grep" {
-			fmt.Println("write: you must specify an expression !!")
-		}
-
-		if result == "gv" || result == "grepv" {
-			fmt.Println("write: you must specify an expression !!")
-		}
-
-		if result == "r" || result == "reload" {
-			initfunc()
-		}
-		if result == "h" || result == "help" {
-			help()
-		}
-
-		if result == "t" || result == "tree" {
-			doTreePlain(results)
-		}
-
-		if result == "s" || result == "sort" {
-			selectSort()
-		}
-
-		if result == "x" || result == "exit" {
-			os.Exit(0)
-		}
-
-		if result == "x" || result == "exit" {
-			os.Exit(0)
-		}
-
-		if result == "sf" || result == "show-filters" {
-			showFilters()
-		}
-
-		if result == "cf" || result == "clear-filters" {
-			clearFilters()
-		}
-
-		filterCMDs := []string{"fc", "fw", "fl", "fs", "mc", "mw", "ml", "ms"}
-		for _, fc := range filterCMDs {
-			if fc == strings.Split(result, " ")[0] {
-				setFilter(result)
 			}
 		}
 
-		if result == "c" || result == "commands" {
-			curScreen = curScreen[:0]
-			for _, cmd := range commands {
-				fmt.Println(cmd)
-				curScreen = append(curScreen, cmd)
+		if cmd == "g" || cmd == "grep" {
+			if args == "" || args == " " {
+				fmt.Println("write: you must specify an expression !!")
+			} else {
+				grep(args)
+
+			}
+		}
+		if cmd == "gv" || cmd == "grepv" {
+			if args == "" || args == " " {
+				fmt.Println("write: you must specify an expression !!")
+			} else {
+				grepv(args)
+
+			}
+		}
+	}
+
+	if result == "w" || result == "write" {
+		fmt.Println("write: you must specify an output file !!")
+	}
+
+	if result == "j" || result == "join" {
+		fmt.Println("write: you must specify an output file !!")
+	}
+
+	if result == "g" || result == "grep" {
+		fmt.Println("write: you must specify an expression !!")
+	}
+
+	if result == "gv" || result == "grepv" {
+		fmt.Println("write: you must specify an expression !!")
+	}
+
+	if result == "r" || result == "reload" {
+		initfunc()
+	}
+	if result == "h" || result == "help" {
+		help()
+	}
+
+	if result == "t" || result == "tree" {
+		doTreePlain(results)
+	}
+
+	if result == "s" || result == "sort" {
+		selectSort()
+	}
+
+	if result == "x" || result == "exit" {
+		os.Exit(0)
+	}
+
+	if result == "x" || result == "exit" {
+		os.Exit(0)
+	}
+
+	if result == "sf" || result == "show-filters" {
+		showFilters()
+	}
+
+	if result == "cf" || result == "clear-filters" {
+		clearFilters()
+	}
+
+	filterCMDs := []string{"fc", "fw", "fl", "fs", "fr", "mc", "mw", "ml", "ms", "mr"}
+	for _, fc := range filterCMDs {
+		if fc == strings.Split(result, " ")[0] {
+			setFilter(result)
+		}
+	}
+
+	if result == "c" || result == "commands" {
+		curScreen = curScreen[:0]
+		for _, cmd := range commands {
+			fmt.Println(cmd)
+			curScreen = append(curScreen, cmd)
+		}
+	}
+
+	if result == "e" || result == "endpoints" {
+		curScreen = curScreen[:0]
+		for _, ep := range results {
+			// if !checkFilter(ep) {
+			// 	continue
+			// }
+			fmt.Println(ep.Endpoint)
+			curScreen = append(curScreen, ep.Endpoint)
+		}
+	}
+
+	if result == "u" || result == "urls" {
+		curScreen = curScreen[:0]
+		for _, ep := range results {
+			// if !checkFilter(ep) {
+			// 	continue
+			// }
+			fmt.Println(ep.URL)
+			curScreen = append(curScreen, ep.URL)
+		}
+	}
+
+	if result == "d" || result == "details" {
+		curScreen = curScreen[:0]
+		maxLen := 0
+		// sorts results by status
+
+		for _, eptest := range results {
+			if len(eptest.URL) > maxLen {
+				maxLen = len(eptest.URL)
 			}
 		}
 
-		if result == "e" || result == "endpoints" {
-			curScreen = curScreen[:0]
-			for _, ep := range results {
-				// if !checkFilter(ep) {
-				// 	continue
-				// }
-				fmt.Println(ep.Endpoint)
-				curScreen = append(curScreen, ep.Endpoint)
-			}
+		for _, ep := range results {
+			// if !checkFilter(ep) {
+			// 	continue
+			// }
+			indent := strings.Repeat(" ", (maxLen + 5 - len(ep.URL)))
+			var res_hdr string
+			res_hdr = fmt.Sprintf("%s%s[Status: %d, Size: %d, Words: %d, Lines: %d]", ep.URL, indent, ep.Status, ep.Length, ep.Words, ep.Lines)
+			res_hdr = colorize(res_hdr, ep.Status)
+			fmt.Printf("%s\n", res_hdr)
+			curScreen = append(curScreen, res_hdr)
 		}
-
-		if result == "u" || result == "urls" {
-			curScreen = curScreen[:0]
-			for _, ep := range results {
-				// if !checkFilter(ep) {
-				// 	continue
-				// }
-				fmt.Println(ep.URL)
-				curScreen = append(curScreen, ep.URL)
-			}
-		}
-
-		if result == "d" || result == "details" {
-			curScreen = curScreen[:0]
-			maxLen := 0
-			// sorts results by status
-
-			for _, eptest := range results {
-				if len(eptest.URL) > maxLen {
-					maxLen = len(eptest.URL)
-				}
-			}
-
-			for _, ep := range results {
-				// if !checkFilter(ep) {
-				// 	continue
-				// }
-				indent := strings.Repeat(" ", (maxLen + 5 - len(ep.URL)))
-				var res_hdr string
-				res_hdr = fmt.Sprintf("%s%s[Status: %d, Size: %d, Words: %d, Lines: %d]", ep.URL, indent, ep.Status, ep.Length, ep.Words, ep.Lines)
-				res_hdr = colorize(res_hdr, ep.Status)
-				fmt.Printf("%s\n", res_hdr)
-				curScreen = append(curScreen, res_hdr)
-			}
-		}
-
 	}
 }

@@ -1,5 +1,7 @@
 package main
 
+import "regexp"
+
 // global debug mode used with env variable
 var DEBUGMODE bool
 
@@ -67,4 +69,6 @@ type Filters struct {
 	WordsHide   []int
 	LinesHide   []int
 	LinesMatch  []int
+	RegExMatch  []*regexp.Regexp
+	RegExHide   []*regexp.Regexp
 }

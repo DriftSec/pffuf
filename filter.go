@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -73,16 +74,26 @@ func setFilter(cmdline string) {
 	args := strings.Join(parts[1:], "")
 
 	argsi := []int{}
+	argsiRegEx := []*regexp.Regexp{}
 	for _, arg := range strings.Split(args, ",") {
 		if arg == " " || arg == "" {
 			continue
 		}
-		argi, err := strconv.Atoi(arg)
-		if err != nil {
-			fmt.Printf("%s is not a valid filter condition\n", arg)
-			return
+		if cmd == "mr" || cmd == "fr" {
+			r, err := regexp.Compile(arg)
+			if err != nil {
+				fmt.Printf("%s is not a valid regular expresssion\n", arg)
+				return
+			}
+			argsiRegEx = append(argsiRegEx, r)
+		} else {
+			argi, err := strconv.Atoi(arg)
+			if err != nil {
+				fmt.Printf("%s is not a valid filter condition\n", arg)
+				return
+			}
+			argsi = append(argsi, argi)
 		}
-		argsi = append(argsi, argi)
 	}
 	if cmd == "fc" {
 		filters.StatusHide = argsi
@@ -108,6 +119,12 @@ func setFilter(cmdline string) {
 	if cmd == "ms" {
 		filters.LinesMatch = argsi
 	}
+	if cmd == "mr" {
+		filters.RegExMatch = argsiRegEx
+	}
+	if cmd == "fr" {
+		filters.RegExHide = argsiRegEx
+	}
 	doFilter()
 }
 
@@ -117,10 +134,12 @@ func showFilters() {
 	fmt.Println("Hide WORDS: ", filters.WordsHide)
 	fmt.Println("Hide LINES: ", filters.LinesHide)
 	fmt.Println("Hide LENGTH: ", filters.LenHide)
+	fmt.Println("Hide REGEX: ", filters.RegExHide)
 	fmt.Println("Match STATUS: ", filters.StatusMatch)
 	fmt.Println("Match WORDS: ", filters.WordsMatch)
 	fmt.Println("Match LINES: ", filters.LinesMatch)
 	fmt.Println("Match LENGTH: ", filters.LenMatch)
+	fmt.Println("Match REGEX: ", filters.RegExMatch)
 }
 func clearFilters() {
 	filters.StatusHide = filters.StatusHide[:0]
@@ -131,6 +150,8 @@ func clearFilters() {
 	filters.WordsMatch = filters.WordsMatch[:0]
 	filters.LinesMatch = filters.LinesMatch[:0]
 	filters.LenMatch = filters.LenMatch[:0]
+	filters.RegExMatch = filters.RegExMatch[:0]
+	filters.RegExHide = filters.RegExHide[:0]
 	results = results[:0]
 	results = origresults
 	doSort()
@@ -138,16 +159,19 @@ func clearFilters() {
 }
 
 func ifMatch(line NavResults) bool {
-	if contains(filters.StatusMatch, line.Status) {
+	if len(filters.RegExMatch) > 0 && containsRegExp(filters.RegExMatch, line.URL) {
 		return true
 	}
-	if contains(filters.LenMatch, line.Length) {
+	if len(filters.StatusMatch) > 0 && containsInt(filters.StatusMatch, line.Status) {
 		return true
 	}
-	if contains(filters.WordsMatch, line.Words) {
+	if len(filters.LenMatch) > 0 && containsInt(filters.LenMatch, line.Length) {
 		return true
 	}
-	if contains(filters.LinesMatch, line.Lines) {
+	if len(filters.WordsMatch) > 0 && containsInt(filters.WordsMatch, line.Words) {
+		return true
+	}
+	if len(filters.LinesMatch) > 0 && containsInt(filters.LinesMatch, line.Lines) {
 		return true
 	}
 
@@ -159,17 +183,21 @@ func checkFilter(line NavResults) bool {
 	if ifMatch(line) {
 		return true
 	} else {
-
-		if contains(filters.StatusHide, line.Status) {
+		for _, r := range filters.RegExHide {
+			if r.MatchString(line.URL) {
+				return false
+			}
+		}
+		if containsInt(filters.StatusHide, line.Status) {
 			return false
 		}
-		if contains(filters.LenHide, line.Length) {
+		if containsInt(filters.LenHide, line.Length) {
 			return false
 		}
-		if contains(filters.WordsHide, line.Words) {
+		if containsInt(filters.WordsHide, line.Words) {
 			return false
 		}
-		if contains(filters.LinesHide, line.Lines) {
+		if containsInt(filters.LinesHide, line.Lines) {
 			return false
 		}
 	}
