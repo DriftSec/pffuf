@@ -42,7 +42,9 @@ func initfunc() {
 	flag.Usage = func() {
 		fmt.Println("")
 		fmt.Println("Usage:")
-		fmt.Println("     ./pffuf [path to ffuf JSON files]")
+		fmt.Println("./pffuf [-cl 'cmds'] [path to ffuf JSON files]")
+		fmt.Println("      -cl [cmds]    Run commands and exit, used for scripting  (i.e. -cl 'mr .*?\\.php;u' to regex for php and print urls)")
+
 		fmt.Println("")
 	}
 
@@ -92,7 +94,7 @@ func initfunc() {
 	if *commandLine != "" {
 		cmds := strings.Split(*commandLine, ";")
 		for _, cmd := range cmds {
-			parseCommand(cmd)
+			parseCommand(strings.TrimLeft(cmd, " "))
 		}
 		os.Exit(0)
 	}
@@ -128,21 +130,30 @@ func promptYesNo(question string) bool {
 
 }
 
-func selectSort() {
-	prompt := promptui.Select{
-		Label: "Sort by:",
-		Items: []string{"Status", "Length", "Words", "Lines", "URL", "Endpoint", "None"},
+func selectSort(arg string) {
+	if arg == "" {
+		prompt := promptui.Select{
+			Label: "Sort by:",
+			Items: []string{"Status", "Length", "Words", "Lines", "URL", "Endpoint", "None"},
+		}
+
+		_, result, err := prompt.Run()
+
+		if err != nil {
+			fmt.Printf("Prompt failed %v\n", err)
+			return
+		}
+
+		sorting = result
+
+	} else {
+		tmp := []string{"status", "length", "words", "lines", "url", "endpoint", "none"}
+		if !containsStr(tmp, arg) {
+			fmt.Println(arg, "is not a valid sort option.(", tmp, ")")
+			return
+		}
+		sorting = arg
 	}
-
-	_, result, err := prompt.Run()
-
-	if err != nil {
-		fmt.Printf("Prompt failed %v\n", err)
-		return
-	}
-
-	sorting = result
-
 	results = results[:0]
 	results = origresults
 	doSort()
@@ -241,6 +252,7 @@ func grepv(expr string) {
 
 func help() {
 
+	fmt.Println("Commands:")
 	fmt.Println("c|commands          List ffuf commands that have been run")
 	fmt.Println("x|exit              Quit")
 	fmt.Println("e|endpoints         List endpoints")
@@ -254,13 +266,13 @@ func help() {
 	fmt.Println("fw [val,val2]       Filter by words")
 	fmt.Println("fl [val,val2]       Filter lines")
 	fmt.Println("fs [val,val2]       Filter lenght")
-	fmt.Println("fr [str1,str2]      Filter string (only on URL)")
+	fmt.Println("fr [regex1,regex2]  Filter URL using regex")
 	fmt.Println("mc [val,val2]       Match status code")
 	fmt.Println("mw [val,val2]       Match words")
 	fmt.Println("ml [val,val2]       Match lines")
 	fmt.Println("ms [val,val2]       Match length")
-	fmt.Println("mr [str1,str2]      Match string (only on URL)")
-	fmt.Println("s|sort                sort ")
+	fmt.Println("mr [regex1,regex2]  Match URL using regex")
+	fmt.Println("s|sort              Sort options")
 	fmt.Println("g|grep [expr]       Run grep on last output")
 	fmt.Println("gv|grepv [expr]     Run grep exclude on last output")
 	fmt.Println("r|reload            Reparse input path for new files")
@@ -302,104 +314,106 @@ func main() {
 func parseCommand(singleCommand string) {
 	result := singleCommand
 	// commands with args go here (except filters)
-	cmd := ""
+	parts := strings.Split(result, " ")
+	cmd := parts[0]
 	args := ""
-	if strings.Contains(result, " ") {
-		parts := strings.Split(result, " ")
-		cmd = parts[0]
+	if len(parts) > 1 {
 		args = parts[1]
+	}
 
-		if cmd == "w" || cmd == "write" {
-			if args == "" || args == " " {
-				fmt.Println("write: you must specify an output file !!")
-			} else {
-				writeFile(args)
+	if cmd == "s" || cmd == "sort" {
+		selectSort(args)
+	}
 
-			}
-		}
+	if cmd == "w" || cmd == "write" {
+		if args == "" || args == " " {
+			fmt.Println("write: you must specify an output file !!")
+		} else {
+			writeFile(args)
 
-		if cmd == "j" || cmd == "join" {
-			if args == "" || args == " " {
-				fmt.Println("write: you must specify an output file !!")
-			} else {
-				joinResults(args)
-
-			}
-		}
-
-		if cmd == "g" || cmd == "grep" {
-			if args == "" || args == " " {
-				fmt.Println("write: you must specify an expression !!")
-			} else {
-				grep(args)
-
-			}
-		}
-		if cmd == "gv" || cmd == "grepv" {
-			if args == "" || args == " " {
-				fmt.Println("write: you must specify an expression !!")
-			} else {
-				grepv(args)
-
-			}
 		}
 	}
 
-	if result == "w" || result == "write" {
+	if cmd == "j" || cmd == "join" {
+		if args == "" || args == " " {
+			fmt.Println("write: you must specify an output file !!")
+		} else {
+			joinResults(args)
+
+		}
+	}
+
+	if cmd == "g" || cmd == "grep" {
+		if args == "" || args == " " {
+			fmt.Println("write: you must specify an expression !!")
+		} else {
+			grep(args)
+
+		}
+	}
+	if cmd == "gv" || cmd == "grepv" {
+		if args == "" || args == " " {
+			fmt.Println("write: you must specify an expression !!")
+		} else {
+			grepv(args)
+
+		}
+	}
+
+	if cmd == "w" || cmd == "write" {
 		fmt.Println("write: you must specify an output file !!")
 	}
 
-	if result == "j" || result == "join" {
+	if cmd == "j" || cmd == "join" {
 		fmt.Println("write: you must specify an output file !!")
 	}
 
-	if result == "g" || result == "grep" {
+	if cmd == "g" || cmd == "grep" {
 		fmt.Println("write: you must specify an expression !!")
 	}
 
-	if result == "gv" || result == "grepv" {
+	if cmd == "gv" || cmd == "grepv" {
 		fmt.Println("write: you must specify an expression !!")
 	}
 
-	if result == "r" || result == "reload" {
+	if cmd == "r" || cmd == "reload" {
 		initfunc()
 	}
-	if result == "h" || result == "help" {
+	if cmd == "h" || cmd == "help" {
 		help()
 	}
 
-	if result == "t" || result == "tree" {
+	if cmd == "t" || cmd == "tree" {
 		doTreePlain(results)
 	}
 
-	if result == "s" || result == "sort" {
-		selectSort()
-	}
+	// if cmd == "s" || cmd == "sort" {
+	// 	selectSort("")
+	// }
 
-	if result == "x" || result == "exit" {
+	if cmd == "x" || cmd == "exit" {
 		os.Exit(0)
 	}
 
-	if result == "x" || result == "exit" {
+	if cmd == "x" || cmd == "exit" {
 		os.Exit(0)
 	}
 
-	if result == "sf" || result == "show-filters" {
+	if cmd == "sf" || cmd == "show-filters" {
 		showFilters()
 	}
 
-	if result == "cf" || result == "clear-filters" {
+	if cmd == "cf" || cmd == "clear-filters" {
 		clearFilters()
 	}
 
 	filterCMDs := []string{"fc", "fw", "fl", "fs", "fr", "mc", "mw", "ml", "ms", "mr"}
-	for _, fc := range filterCMDs {
-		if fc == strings.Split(result, " ")[0] {
-			setFilter(result)
-		}
+
+	if containsStr(filterCMDs, cmd) {
+		setFilter(cmd, args)
 	}
 
-	if result == "c" || result == "commands" {
+	if cmd == "c" || cmd == "commands" {
 		curScreen = curScreen[:0]
 		for _, cmd := range commands {
 			fmt.Println(cmd)
@@ -407,7 +421,7 @@ func parseCommand(singleCommand string) {
 		}
 	}
 
-	if result == "e" || result == "endpoints" {
+	if cmd == "e" || cmd == "endpoints" {
 		curScreen = curScreen[:0]
 		for _, ep := range results {
 			// if !checkFilter(ep) {
@@ -418,7 +432,7 @@ func parseCommand(singleCommand string) {
 		}
 	}
 
-	if result == "u" || result == "urls" {
+	if cmd == "u" || cmd == "urls" {
 		curScreen = curScreen[:0]
 		for _, ep := range results {
 			// if !checkFilter(ep) {
@@ -429,7 +443,7 @@ func parseCommand(singleCommand string) {
 		}
 	}
 
-	if result == "d" || result == "details" {
+	if cmd == "d" || cmd == "details" {
 		curScreen = curScreen[:0]
 		maxLen := 0
 		// sorts results by status

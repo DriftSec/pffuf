@@ -11,39 +11,40 @@ import (
 )
 
 func doSort() {
-	if sorting == "Status" {
+	sorting = strings.ToLower(sorting)
+	if sorting == "status" {
 		sort.Slice(results[:], func(i, j int) bool {
 			return results[i].Status < results[j].Status
 		})
 	}
 
-	if sorting == "Length" {
+	if sorting == "length" {
 		sort.Slice(results[:], func(i, j int) bool {
 			return results[i].Length < results[j].Length
 		})
 	}
 
-	if sorting == "Words" {
+	if sorting == "words" {
 		sort.Slice(results[:], func(i, j int) bool {
 			return results[i].Words < results[j].Words
 		})
 	}
 
-	if sorting == "Lines" {
+	if sorting == "lines" {
 		sort.Slice(results[:], func(i, j int) bool {
 			return results[i].Lines < results[j].Lines
 		})
 	}
 
-	if sorting == "URL" {
+	if sorting == "url" {
 		slice.Sort(results[:], func(i, j int) bool { return results[i].URL < results[j].URL })
 	}
 
-	if sorting == "Endpoint" {
+	if sorting == "endpoint" {
 		slice.Sort(results[:], func(i, j int) bool { return results[i].Endpoint < results[j].Endpoint })
 	}
 
-	if sorting == "None" {
+	if sorting == "none" {
 		results = results[:0]
 		results = origresults
 		doFilter()
@@ -51,10 +52,10 @@ func doSort() {
 	}
 }
 
-func setFilter(cmdline string) {
-	parts := strings.Split(cmdline, " ")
-	cmd := parts[0]
-	args := strings.Join(parts[1:], "")
+func setFilter(cmd, args string) {
+	// parts := strings.Split(cmdline, " ")
+	// cmd := parts[0]
+	// args := strings.Join(parts[1:], "")
 
 	argsi := []int{}
 	argsiRegEx := []*regexp.Regexp{}
@@ -142,22 +143,6 @@ func clearFilters() {
 }
 
 func ifMatch(line NavResults) bool {
-	// if len(filters.RegExMatch) > 0 && containsRegExp(filters.RegExMatch, line.URL) {
-	// 	return true
-	// }
-	// if len(filters.StatusMatch) > 0 && containsInt(filters.StatusMatch, line.Status) {
-	// 	return true
-	// }
-	// if len(filters.LenMatch) > 0 && containsInt(filters.LenMatch, line.Length) {
-	// 	return true
-	// }
-	// if len(filters.WordsMatch) > 0 && containsInt(filters.WordsMatch, line.Words) {
-	// 	return true
-	// }
-	// if len(filters.LinesMatch) > 0 && containsInt(filters.LinesMatch, line.Lines) {
-	// 	return true
-	// }
-
 	if (len(filters.RegExMatch) == 0 || containsRegExp(filters.RegExMatch, line.URL)) && (len(filters.StatusMatch) == 0 || containsInt(filters.StatusMatch, line.Status)) && (len(filters.LenMatch) == 0 || containsInt(filters.LenMatch, line.Length)) && (len(filters.WordsMatch) == 0 || containsInt(filters.WordsMatch, line.Words)) && (len(filters.LinesMatch) == 0 || containsInt(filters.LinesMatch, line.Lines)) {
 		return true
 	}
