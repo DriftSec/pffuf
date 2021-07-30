@@ -360,22 +360,6 @@ func parseCommand(singleCommand string) {
 		}
 	}
 
-	if cmd == "w" || cmd == "write" {
-		fmt.Println("write: you must specify an output file !!")
-	}
-
-	if cmd == "j" || cmd == "join" {
-		fmt.Println("write: you must specify an output file !!")
-	}
-
-	if cmd == "g" || cmd == "grep" {
-		fmt.Println("write: you must specify an expression !!")
-	}
-
-	if cmd == "gv" || cmd == "grepv" {
-		fmt.Println("write: you must specify an expression !!")
-	}
-
 	if cmd == "r" || cmd == "reload" {
 		initfunc()
 	}
