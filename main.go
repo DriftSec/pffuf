@@ -44,11 +44,13 @@ func initfunc() {
 		fmt.Println("Usage:")
 		fmt.Println("./pffuf [-cl 'cmds'] [path to ffuf JSON files]")
 		fmt.Println("      -cl [cmds]    Run commands and exit, used for scripting  (i.e. -cl 'mr .*?\\.php;u' to regex for php and print urls)")
+		fmt.Println("      -r            Recursively search for JSON files")
 
 		fmt.Println("")
 	}
 
 	commandLine := flag.String("cl", "", "Run command line and exit")
+	recurse := flag.Bool("r", false, "Recursively search for .json files")
 	flag.Parse()
 
 	if flag.NArg() > 0 {
@@ -59,8 +61,11 @@ func initfunc() {
 	} else {
 		inputPath = "./"
 	}
-
-	inputFiles = getFilelist(inputPath + "*.json")
+	if *recurse {
+		inputFiles = getFilelistRecursive(inputPath)
+	} else {
+		inputFiles = getFilelist(inputPath + "*.json")
+	}
 
 	if len(inputFiles) <= 0 {
 		fmt.Println("No JSON files found !!!")

@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -23,6 +25,25 @@ func getFilelist(inputArg string) []string {
 	for _, match := range matches {
 		retval = append(retval, match)
 	}
+	return retval
+}
+
+func getFilelistRecursive(inputArg string) []string {
+	var retval []string
+	err := filepath.Walk(inputArg,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if strings.HasSuffix(path, ".json") {
+				retval = append(retval, path)
+			}
+			return nil
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return retval
 }
 
